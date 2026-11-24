@@ -1,15 +1,25 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { Truck, CheckCircle2, Clock, XCircle, Plus, X, AlertCircle } from 'lucide-react';
+import { Truck, CheckCircle2, Clock, XCircle, Plus, X, AlertCircle, Edit, Trash2 } from 'lucide-react';
 
 export default function OrdersPage() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [notification, setNotification] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const [form, setForm] = useState({
+    vendorId: '',
+    warehouseId: '',
+    productId: '',
+    quantity: 10
+  });
+
+  const [editForm, setEditForm] = useState({
+    id: '',
+    orderNumber: '',
     vendorId: '',
     warehouseId: '',
     productId: '',
@@ -110,6 +120,46 @@ export default function OrdersPage() {
     }
   });
 
+  const updateOrderMutation = useMutation({
+    mutationFn: async (payload) => {
+      return api.put(`/orders/${payload.id}`, {
+        quantity: Number(payload.quantity),
+        productId: payload.productId,
+        warehouseId: payload.warehouseId,
+        vendorId: payload.vendorId
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['distribution-orders']);
+      setIsEditModalOpen(false);
+      setErrorMessage('');
+      setNotification('Order updated successfully!');
+      setTimeout(() => setNotification(''), 4000);
+    },
+    onError: (err) => {
+      const msg = err.response?.data?.error?.message || 'Update failed';
+      setErrorMessage(`❌ Error: ${msg}`);
+      setTimeout(() => setErrorMessage(''), 6000);
+    }
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId) => {
+      return api.delete(`/orders/${orderId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['distribution-orders']);
+      setErrorMessage('');
+      setNotification('Order deleted successfully!');
+      setTimeout(() => setNotification(''), 4000);
+    },
+    onError: (err) => {
+      const msg = err.response?.data?.error?.message || 'Delete failed';
+      setErrorMessage(`❌ Error: ${msg}`);
+      setTimeout(() => setErrorMessage(''), 6000);
+    }
+  });
+
   const formatPKR = (paisa = 0) => {
     return `PKR ${(paisa / 100).toLocaleString('en-PK', { minimumFractionDigits: 2 })}`;
   };
@@ -202,13 +252,43 @@ export default function OrdersPage() {
                     <td className="px-6 py-4 font-semibold text-slate-900">{formatPKR(order.grandTotalPaisa)}</td>
                     <td className="px-6 py-4 text-right space-x-2">
                       {order.status === 'DRAFT' && (
-                        <button
-                          onClick={() => allocateMutation.mutate(order._id)}
-                          disabled={allocateMutation.isPending}
-                          className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium"
-                        >
-                          Allocate Stock
-                        </button>
+                        <>
+                          <button
+                            onClick={() => allocateMutation.mutate(order._id)}
+                            disabled={allocateMutation.isPending}
+                            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium"
+                          >
+                            Allocate Stock
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditForm({
+                                id: order._id,
+                                orderNumber: order.orderNumber,
+                                vendorId: order.vendorId?._id || '',
+                                warehouseId: order.warehouseId?._id || '',
+                                productId: order.items?.[0]?.productId || '',
+                                quantity: order.items?.[0]?.quantity || 1
+                              });
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 inline-flex items-center"
+                            title="Edit Order"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete order ${order.orderNumber}?`)) {
+                                deleteOrderMutation.mutate(order._id);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 inline-flex items-center"
+                            title="Delete Order"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
                       {order.status === 'ALLOCATED' && (
                         <button
@@ -354,6 +434,108 @@ export default function OrdersPage() {
                   className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700"
                 >
                   {createMutation.isPending ? 'Placing...' : 'Place Order'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Order Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-lg text-slate-900">Edit Order</h3>
+                <p className="text-xs text-slate-500">Order: {editForm.orderNumber}</p>
+              </div>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                updateOrderMutation.mutate(editForm);
+              }}
+              className="mt-4 space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Customer / Vendor</label>
+                <select
+                  required
+                  value={editForm.vendorId}
+                  onChange={e => setEditForm({ ...editForm, vendorId: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-xl text-sm"
+                >
+                  {vendors?.map(v => (
+                    <option key={v._id} value={v._id}>
+                      {v.name} ({v.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Fulfillment Warehouse</label>
+                <select
+                  required
+                  value={editForm.warehouseId}
+                  onChange={e => setEditForm({ ...editForm, warehouseId: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-xl text-sm"
+                >
+                  {warehouses?.map(w => (
+                    <option key={w?._id} value={w?._id}>
+                      {w?.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Product</label>
+                <select
+                  required
+                  value={editForm.productId}
+                  onChange={e => setEditForm({ ...editForm, productId: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-xl text-sm"
+                >
+                  {products?.map(p => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} ({p.sku})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Order Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={editForm.quantity}
+                  onChange={e => setEditForm({ ...editForm, quantity: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-xl text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 border rounded-xl text-sm text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateOrderMutation.isPending}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700"
+                >
+                  {updateOrderMutation.isPending ? 'Updating...' : 'Save Order Changes'}
                 </button>
               </div>
             </form>

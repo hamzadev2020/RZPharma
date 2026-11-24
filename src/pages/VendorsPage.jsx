@@ -16,9 +16,7 @@ export default function VendorsPage() {
     name: '',
     phone: '',
     contactPerson: '',
-    city: '',
-    paymentTermsDays: 30,
-    creditLimitPKR: 100000
+    city: ''
   });
 
   const [editForm, setEditForm] = useState({
@@ -27,9 +25,7 @@ export default function VendorsPage() {
     name: '',
     phone: '',
     contactPerson: '',
-    city: '',
-    paymentTermsDays: 30,
-    creditLimitPKR: 100000
+    city: ''
   });
 
   const { data: vendors, isLoading } = useQuery({
@@ -57,8 +53,8 @@ export default function VendorsPage() {
         phone: payload.phone ? payload.phone.trim() : '',
         contactPerson: payload.contactPerson ? payload.contactPerson.trim() : '',
         address: { city: payload.city ? payload.city.trim() : '' },
-        paymentTermsDays: Number(payload.paymentTermsDays),
-        creditLimitPaisa: Math.round(Number(payload.creditLimitPKR || 0) * 100)
+        paymentTermsDays: 30,
+        creditLimitPaisa: 0
       });
     },
     onSuccess: (res) => {
@@ -71,9 +67,7 @@ export default function VendorsPage() {
         name: '',
         phone: '',
         contactPerson: '',
-        city: '',
-        paymentTermsDays: 30,
-        creditLimitPKR: 100000
+        city: ''
       });
       setNotification(`Customer registered successfully with ID: ${res.data.data.code}`);
       setTimeout(() => setNotification(''), 4000);
@@ -91,9 +85,7 @@ export default function VendorsPage() {
         name: payload.name.trim(),
         phone: payload.phone ? payload.phone.trim() : '',
         contactPerson: payload.contactPerson ? payload.contactPerson.trim() : '',
-        address: { city: payload.city ? payload.city.trim() : '' },
-        paymentTermsDays: Number(payload.paymentTermsDays),
-        creditLimitPaisa: Math.round(Number(payload.creditLimitPKR || 0) * 100)
+        address: { city: payload.city ? payload.city.trim() : '' }
       });
     },
     onSuccess: () => {
@@ -128,10 +120,6 @@ export default function VendorsPage() {
     }
   });
 
-  const formatPKR = (paisa = 0) => {
-    return `PKR ${(paisa / 100).toLocaleString('en-PK', { minimumFractionDigits: 2 })}`;
-  };
-
   const handleOpenEdit = (v) => {
     setEditForm({
       id: v._id,
@@ -139,9 +127,7 @@ export default function VendorsPage() {
       name: v.name,
       phone: v.phone || '',
       contactPerson: v.contactPerson || '',
-      city: v.address?.city || '',
-      paymentTermsDays: v.paymentTermsDays || 30,
-      creditLimitPKR: (v.creditLimitPaisa || 0) / 100
+      city: v.address?.city || ''
     });
     setIsEditModalOpen(true);
   };
@@ -156,9 +142,9 @@ export default function VendorsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Customers & Debtors Ledger</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Customers (Medical Stores)</h1>
           <p className="text-sm text-slate-500">
-            Registered wholesale retail stores, credit limits, and Customer IDs (Starting from 700)
+            Registered wholesale retail stores and Customer IDs
           </p>
         </div>
         <button
@@ -204,23 +190,21 @@ export default function VendorsPage() {
             <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500">
               <tr>
                 <th className="px-6 py-4">Customer ID</th>
-                <th className="px-6 py-4">Store / Business Name</th>
-                <th className="px-6 py-4">Contact Person</th>
-                <th className="px-6 py-4">Phone</th>
+                <th className="px-6 py-4">Store / Medical Name</th>
+                <th className="px-6 py-4">Phone Number</th>
                 <th className="px-6 py-4">City / Area</th>
-                <th className="px-6 py-4">Payment Terms</th>
-                <th className="px-6 py-4">Credit Limit</th>
+                <th className="px-6 py-4">Contact Person</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-slate-400">Loading customers...</td>
+                  <td colSpan={6} className="text-center py-8 text-slate-400">Loading customers...</td>
                 </tr>
               ) : vendors?.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-slate-400">No customers registered yet</td>
+                  <td colSpan={6} className="text-center py-8 text-slate-400">No customers registered yet</td>
                 </tr>
               ) : (
                 vendors?.map(v => (
@@ -229,17 +213,9 @@ export default function VendorsPage() {
                       {v.code}
                     </td>
                     <td className="px-6 py-4 font-semibold text-slate-800">{v.name}</td>
-                    <td className="px-6 py-4">{v.contactPerson || '—'}</td>
-                    <td className="px-6 py-4 text-xs font-mono">{v.phone || '—'}</td>
-                    <td className="px-6 py-4">{v.address?.city || '—'}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
-                        {v.paymentTermsDays} Days
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">
-                      {formatPKR(v.creditLimitPaisa)}
-                    </td>
+                    <td className="px-6 py-4 text-sm font-mono text-slate-700">{v.phone || '—'}</td>
+                    <td className="px-6 py-4 text-sm">{v.address?.city || '—'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{v.contactPerson || '—'}</td>
                     <td className="px-6 py-4 text-right space-x-2">
                       <button
                         onClick={() => handleOpenEdit(v)}
@@ -271,7 +247,7 @@ export default function VendorsPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Add New Customer</h3>
-                <p className="text-xs text-slate-500">Auto-numbered sequence starting from 700</p>
+                <p className="text-xs text-slate-500">Auto-assigned ID starting from 700 series</p>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -295,7 +271,7 @@ export default function VendorsPage() {
                 <input
                   type="text"
                   disabled
-                  value={nextCodeData ? `${nextCodeData} (Auto)` : 'Auto (e.g. 701)'}
+                  value={nextCodeData ? `${nextCodeData} (Auto)` : 'Auto (700 series)'}
                   className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-sm font-mono font-bold text-indigo-700 cursor-not-allowed"
                 />
               </div>
@@ -316,7 +292,34 @@ export default function VendorsPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Contact Person
+                  Phone Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="0336-7388274"
+                  value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  City / Area
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Donali Haripur"
+                  value={form.city}
+                  onChange={e => setForm({ ...form, city: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Contact Person (Optional)
                 </label>
                 <input
                   type="text"
@@ -325,60 +328,6 @@ export default function VendorsPage() {
                   onChange={e => setForm({ ...form, contactPerson: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="0336-7388274"
-                    value={form.phone}
-                    onChange={e => setForm({ ...form, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    City / Area
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Donali Haripur"
-                    value={form.city}
-                    onChange={e => setForm({ ...form, city: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Payment Terms (Days)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.paymentTermsDays}
-                    onChange={e => setForm({ ...form, paymentTermsDays: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Credit Limit (PKR)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.creditLimitPKR}
-                    onChange={e => setForm({ ...form, creditLimitPKR: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
@@ -409,7 +358,7 @@ export default function VendorsPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Edit Customer</h3>
-                <p className="text-xs text-slate-500">Update details for Customer ID: {editForm.code}</p>
+                <p className="text-xs text-slate-500">Customer ID: {editForm.code}</p>
               </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}
@@ -453,66 +402,38 @@ export default function VendorsPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={editForm.phone}
+                  onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  City / Area
+                </label>
+                <input
+                  type="text"
+                  value={editForm.city}
+                  onChange={e => setEditForm({ ...editForm, city: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                   Contact Person
                 </label>
                 <input
                   type="text"
                   value={editForm.contactPerson}
                   onChange={e => setEditForm({ ...editForm, contactPerson: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.phone}
-                    onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    City / Area
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.city}
-                    onChange={e => setEditForm({ ...editForm, city: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Payment Terms (Days)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editForm.paymentTermsDays}
-                    onChange={e => setEditForm({ ...editForm, paymentTermsDays: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Credit Limit (PKR)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editForm.creditLimitPKR}
-                    onChange={e => setEditForm({ ...editForm, creditLimitPKR: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
