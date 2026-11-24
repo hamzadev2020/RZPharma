@@ -39,24 +39,24 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-2xl p-6 text-white shadow-xl flex items-center justify-between">
+      <div className="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-2xl p-5 sm:p-6 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Welcome back, {user?.name}!</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold">Welcome back, {user?.name}!</h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">
             Real-time Distribution & Inventory Control Center
           </p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap gap-2.5 sm:space-x-3 w-full sm:w-auto">
           <Link
             to="/orders"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium flex items-center space-x-2 shadow-md shadow-indigo-600/30 transition-all"
+            className="flex-1 sm:flex-initial px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center space-x-2 shadow-md shadow-indigo-600/30 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>New Order</span>
           </Link>
           <Link
             to="/stock"
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium flex items-center space-x-2 border border-slate-700 transition-all"
+            className="flex-1 sm:flex-initial px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center space-x-2 border border-slate-700 transition-all"
           >
             <PackageCheck className="w-4 h-4" />
             <span>Stock In</span>
