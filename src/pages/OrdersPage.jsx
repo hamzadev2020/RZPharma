@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { Truck, CheckCircle2, Clock, XCircle, Plus, X } from 'lucide-react';
+import { Truck, CheckCircle2, Clock, XCircle, Plus, X, AlertCircle } from 'lucide-react';
 
 export default function OrdersPage() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [notification, setNotification] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [form, setForm] = useState({
     vendorId: '',
@@ -73,8 +74,14 @@ export default function OrdersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['distribution-orders']);
       queryClient.invalidateQueries(['stock-balances']);
+      setErrorMessage('');
       setNotification('Stock reserved atomically! Order is ALLOCATED.');
       setTimeout(() => setNotification(''), 4000);
+    },
+    onError: (err) => {
+      const msg = err.response?.data?.error?.message || 'Stock allocation failed due to insufficient stock';
+      setErrorMessage(`❌ Stock Allocation Failed: ${msg}. Please add stock in "Stock & Batches" for this warehouse first.`);
+      setTimeout(() => setErrorMessage(''), 7000);
     }
   });
 
@@ -92,8 +99,14 @@ export default function OrdersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['distribution-orders']);
       queryClient.invalidateQueries(['stock-balances']);
+      setErrorMessage('');
       setNotification('Order dispatched! Delivery Challan & Draft Invoice generated.');
       setTimeout(() => setNotification(''), 4000);
+    },
+    onError: (err) => {
+      const msg = err.response?.data?.error?.message || 'Dispatch failed';
+      setErrorMessage(`❌ Dispatch Failed: ${msg}`);
+      setTimeout(() => setErrorMessage(''), 7000);
     }
   });
 
@@ -146,6 +159,13 @@ export default function OrdersPage() {
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center space-x-2">
           <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600" />
           <span>{notification}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center space-x-2">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" />
+          <span>{errorMessage}</span>
         </div>
       )}
 

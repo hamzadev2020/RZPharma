@@ -7,7 +7,7 @@ export const api = axios.create({
 
 // Attach Authorization header if access token exists
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -25,11 +25,13 @@ api.interceptors.response.use(
         const res = await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true });
         const newToken = res.data.data.accessToken;
         localStorage.setItem('accessToken', newToken);
+        sessionStorage.setItem('accessToken', newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (refreshErr) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
+        sessionStorage.clear();
         window.location.href = '/login';
         return Promise.reject(refreshErr);
       }

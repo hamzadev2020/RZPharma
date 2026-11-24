@@ -47,7 +47,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 space-x-6 text-sm font-medium">
+      <div className="flex border-b border-slate-200 space-x-4 sm:space-x-6 text-sm font-medium overflow-x-auto whitespace-nowrap scrollbar-none pb-0.5">
         <button
           onClick={() => setActiveTab('aging')}
           className={`pb-3 border-b-2 flex items-center space-x-2 transition-all ${
