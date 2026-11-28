@@ -71,7 +71,7 @@ export default function InvoicesPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Invoices & Accounts Receivable</h1>
         <p className="text-sm text-slate-500">
-          Monthly gapless numbering, snapshots, integer paisa billing, and PDFKit generation
+          Official billing, partial collection balance tracking, 1% tax calculation, and PDF invoices
         </p>
       </div>
 
@@ -91,9 +91,9 @@ export default function InvoicesPage() {
                 <th className="px-6 py-4">Customer</th>
                 <th className="px-6 py-4">Document Status</th>
                 <th className="px-6 py-4">Payment Status</th>
-                <th className="px-6 py-4">Total Amount</th>
-                <th className="px-6 py-4">Balance Due</th>
-                <th className="px-6 py-4">Due Date</th>
+                <th className="px-6 py-4">Total Bill</th>
+                <th className="px-6 py-4">Amount Paid</th>
+                <th className="px-6 py-4">Remaining Balance</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -134,28 +134,38 @@ export default function InvoicesPage() {
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
                           PAID
                         </span>
+                      ) : inv.paymentStatus === 'PARTIALLY_PAID' ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                          PARTIALLY PAID
+                        </span>
                       ) : inv.isOverdue ? (
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 flex items-center w-fit space-x-1">
                           <AlertCircle className="w-3 h-3" />
                           <span>OVERDUE</span>
                         </span>
                       ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                          {inv.paymentStatus}
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                          UNPAID
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 font-semibold text-slate-900">{formatPKR(inv.grandTotalPaisa)}</td>
-                    <td className="px-6 py-4 font-bold text-rose-600">{formatPKR(inv.outstandingPaisa)}</td>
-                    <td className="px-6 py-4 text-xs">
-                      {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}
+                    <td className="px-6 py-4 font-medium text-emerald-700">
+                      {inv.paidPaisa > 0 ? formatPKR(inv.paidPaisa) : '—'}
+                    </td>
+                    <td className="px-6 py-4">
+                      {inv.outstandingPaisa === 0 ? (
+                        <span className="text-emerald-700 font-bold font-mono">PKR 0.00 (Cleared)</span>
+                      ) : (
+                        <span className="text-rose-600 font-bold font-mono">{formatPKR(inv.outstandingPaisa)}</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       {inv.documentStatus === 'DRAFT' && (
                         <button
                           onClick={() => issueMutation.mutate(inv._id)}
                           disabled={issueMutation.isPending}
-                          className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium"
+                          className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium shadow-xs"
                         >
                           Issue & Post
                         </button>

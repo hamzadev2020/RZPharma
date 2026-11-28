@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { CreditCard, CheckCircle2, Plus, X } from 'lucide-react';
+import { CreditCard, CheckCircle2, Plus, X, Wallet, AlertCircle, ArrowDownCircle } from 'lucide-react';
 
 export default function PaymentsPage() {
   const queryClient = useQueryClient();
@@ -11,7 +11,7 @@ export default function PaymentsPage() {
   const [form, setForm] = useState({
     vendorId: '',
     amountPKR: '',
-    method: 'BANK_TRANSFER',
+    method: 'CASH',
     chequeNumber: '',
     bankName: '',
     referenceNumber: ''
@@ -33,6 +33,14 @@ export default function PaymentsPage() {
     }
   });
 
+  const { data: invoices } = useQuery({
+    queryKey: ['invoices-list'],
+    queryFn: async () => {
+      const res = await api.get('/invoices');
+      return res.data.data;
+    }
+  });
+
   const createPaymentMutation = useMutation({
     mutationFn: async (payload) => {
       const key = `PAY-${Date.now()}`;
@@ -45,7 +53,7 @@ export default function PaymentsPage() {
       queryClient.invalidateQueries(['invoices-list']);
       queryClient.invalidateQueries(['vendors']);
       setIsModalOpen(false);
-      setNotification('Payment recorded, allocated to invoices, and credited to Vendor Ledger!');
+      setNotification('Payment recorded! Invoices updated and remaining balance adjusted.');
       setTimeout(() => setNotification(''), 4000);
     }
   });
@@ -60,7 +68,7 @@ export default function PaymentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['payments-list']);
       queryClient.invalidateQueries(['invoices-list']);
-      setNotification('Cheque cleared! Invoice outstanding reduced.');
+      setNotification('Cheque cleared! Invoice outstanding balance reduced.');
       setTimeout(() => setNotification(''), 4000);
     }
   });
@@ -84,13 +92,23 @@ export default function PaymentsPage() {
     });
   };
 
+  // Helper to compute selected customer outstanding balance
+  const selectedCustomerInvoices = invoices?.filter(inv => {
+    const vId = inv.vendorId?._id || inv.vendorId;
+    return vId === form.vendorId && inv.documentStatus === 'ISSUED';
+  }) || [];
+
+  const customerTotalDuePaisa = selectedCustomerInvoices.reduce((sum, inv) => sum + (inv.outstandingPaisa || 0), 0);
+  const enteredAmountPaisa = Math.round((Number(form.amountPKR) || 0) * 100);
+  const remainingDuePaisa = Math.max(0, customerTotalDuePaisa - enteredAmountPaisa);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Collections & Payments</h1>
           <p className="text-sm text-slate-500">
-            Payment receipts, cheque clearing workflows, and automated invoice allocation
+            Payment receipts, partial payment balance tracking, cheque clearing, and invoice allocation
           </p>
         </div>
         <button
@@ -99,7 +117,7 @@ export default function PaymentsPage() {
               setForm({
                 vendorId: vendors[0]._id,
                 amountPKR: '',
-                method: 'BANK_TRANSFER',
+                method: 'CASH',
                 chequeNumber: '',
                 bankName: '',
                 referenceNumber: ''
@@ -127,11 +145,11 @@ export default function PaymentsPage() {
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500">
               <tr>
-                <th className="px-6 py-4">Payment #</th>
+                <th className="px-6 py-4">Receipt #</th>
                 <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Method</th>
-                <th className="px-6 py-4">Amount</th>
-                <th className="px-6 py-4">Allocated</th>
+                <th className="px-6 py-4">Method & Ref</th>
+                <th className="px-6 py-4">Amount Collected</th>
+                <th className="px-6 py-4">Allocated to Bills</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
@@ -149,15 +167,30 @@ export default function PaymentsPage() {
                 payments?.map(pay => (
                   <tr key={pay._id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4 font-mono font-bold text-slate-900">{pay.paymentNumber}</td>
-                    <td className="px-6 py-4 font-medium text-slate-800">{pay.vendorId?.name}</td>
+                    <td className="px-6 py-4 font-medium text-slate-800">
+                      {pay.vendorId?.name}
+                      {pay.vendorId?.code && (
+                        <span className="block text-xs font-mono text-indigo-600 font-normal">ID: {pay.vendorId.code}</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
-                      <span className="font-semibold text-xs">{pay.method}</span>
+                      <span className="font-semibold text-xs text-slate-900 block">{pay.method}</span>
                       {pay.chequeDetails?.chequeNumber && (
-                        <p className="text-xs text-slate-400 font-mono">Chq: {pay.chequeDetails.chequeNumber}</p>
+                        <p className="text-xs text-slate-500 font-mono">Chq: {pay.chequeDetails.chequeNumber} ({pay.chequeDetails.bankName})</p>
+                      )}
+                      {pay.referenceNumber && (
+                        <p className="text-xs text-slate-400">{pay.referenceNumber}</p>
                       )}
                     </td>
                     <td className="px-6 py-4 font-bold text-emerald-700">{formatPKR(pay.amountPaisa)}</td>
-                    <td className="px-6 py-4 text-slate-600">{formatPKR(pay.allocatedPaisa)}</td>
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-slate-800">{formatPKR(pay.allocatedPaisa)}</span>
+                      {pay.unallocatedPaisa > 0 && (
+                        <span className="block text-[11px] text-blue-600 font-medium">
+                          + {formatPKR(pay.unallocatedPaisa)} Advance
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       {pay.status === 'CLEARED' ? (
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
@@ -178,7 +211,7 @@ export default function PaymentsPage() {
                         <button
                           onClick={() => clearChequeMutation.mutate(pay._id)}
                           disabled={clearChequeMutation.isPending}
-                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium"
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium shadow-xs"
                         >
                           Clear Cheque
                         </button>
@@ -195,9 +228,12 @@ export default function PaymentsPage() {
       {/* Record Payment Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h3 className="font-bold text-lg text-slate-900">Record Customer Payment</h3>
+              <div>
+                <h3 className="font-bold text-lg text-slate-900">Record Customer Payment</h3>
+                <p className="text-xs text-slate-500">Collect full or partial cash/cheque and auto-settle invoices</p>
+              </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -205,14 +241,14 @@ export default function PaymentsPage() {
 
             <form onSubmit={handleRecord} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Customer / Vendor</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Customer / Medical Store</label>
                 <select
                   required
                   value={form.vendorId}
                   onChange={e => setForm({ ...form, vendorId: e.target.value })}
                   className="w-full px-3 py-2 border rounded-xl text-sm"
                 >
-                  <option value="">Select vendor...</option>
+                  <option value="">Select customer...</option>
                   {vendors?.map(v => (
                     <option key={v._id} value={v._id}>
                       {v.name} ({v.code})
@@ -221,17 +257,41 @@ export default function PaymentsPage() {
                 </select>
               </div>
 
+              {/* Customer Outstanding Balance Card */}
+              {form.vendorId && (
+                <div className="p-3.5 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1.5 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-indigo-950">Customer Total Balance Due (Kul Baqaya):</span>
+                    <span className="font-bold text-sm font-mono text-rose-700">{formatPKR(customerTotalDuePaisa)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600 text-[11px]">
+                    <span>Pending Invoices:</span>
+                    <span>{selectedCustomerInvoices.length} unpaid bill(s)</span>
+                  </div>
+
+                  {enteredAmountPaisa > 0 && (
+                    <div className="pt-2 border-t border-indigo-200/60 flex justify-between items-center text-xs">
+                      <span className="font-semibold text-slate-800">Remaining Balance After This Collection:</span>
+                      <span className={`font-mono font-bold ${remainingDuePaisa === 0 ? 'text-emerald-700' : 'text-amber-800'}`}>
+                        {remainingDuePaisa === 0 ? 'PKR 0.00 (Fully Settled!)' : formatPKR(remainingDuePaisa)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Amount (PKR)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Collection Amount (PKR)</label>
                   <input
                     type="number"
                     step="0.01"
+                    min="1"
                     required
                     value={form.amountPKR}
                     onChange={e => setForm({ ...form, amountPKR: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl text-sm"
-                    placeholder="10000.00"
+                    className="w-full px-3 py-2 border border-emerald-300 bg-emerald-50/20 rounded-xl text-sm font-bold text-emerald-900"
+                    placeholder="e.g. 50000"
                   />
                 </div>
                 <div>
@@ -241,8 +301,8 @@ export default function PaymentsPage() {
                     onChange={e => setForm({ ...form, method: e.target.value })}
                     className="w-full px-3 py-2 border rounded-xl text-sm"
                   >
-                    <option value="BANK_TRANSFER">Bank Transfer</option>
                     <option value="CASH">Cash</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
                     <option value="CHEQUE">Cheque</option>
                     <option value="ONLINE">Online Portal</option>
                   </select>
@@ -283,7 +343,7 @@ export default function PaymentsPage() {
                   value={form.referenceNumber}
                   onChange={e => setForm({ ...form, referenceNumber: e.target.value })}
                   className="w-full px-3 py-2 border rounded-xl text-sm"
-                  placeholder="e.g. Deposit Slip #12345"
+                  placeholder="e.g. Received partial cash by recovery officer"
                 />
               </div>
 
@@ -298,9 +358,9 @@ export default function PaymentsPage() {
                 <button
                   type="submit"
                   disabled={createPaymentMutation.isPending}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 shadow-xs"
                 >
-                  {createPaymentMutation.isPending ? 'Processing...' : 'Record Payment'}
+                  {createPaymentMutation.isPending ? 'Recording Collection...' : 'Record Payment'}
                 </button>
               </div>
             </form>
